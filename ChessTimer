@@ -1,0 +1,320 @@
+# this is created with a rp2040 board with neopixel and helps to show the state of the timer.
+from machine import Pin, SPI, SoftSPI
+import max7219_8digit
+import time
+from neopixel import NeoPixel
+
+
+pin = Pin(23, Pin.OUT)
+np = NeoPixel(pin, 1)   
+
+
+spi = SoftSPI(baudrate=100000, polarity=1, phase=0, sck=Pin(4), mosi=Pin(2), miso=Pin(0))
+ss = Pin(5, Pin.OUT)
+display = max7219_8digit.Display(spi, ss)
+display.set_intensity(5)
+
+previousmillis = 0
+interval = 1000
+currentmillis = 0
+
+button1 = Pin(16, Pin.IN, Pin.PULL_DOWN)
+button2 = Pin(17, Pin.IN, Pin.PULL_DOWN)
+
+countdown1 = int(20)
+countdown2 = int(20)
+log1 = int(1)
+log2 = int(1)
+# time1 = int(input("Enter the time(1) in seconds: "))
+player_state = 1
+timer1 = 0
+timer2 = 0
+
+savetime = 20
+
+adjust = 2
+
+seconds = timer1 % 60
+minutes = int(timer1 / 60) % 60
+#    print(f"{hours:02}.{minutes:02}.{seconds:02}")
+# timer = f"{minutes:02}.{seconds:02}"
+
+seconds2 = timer2 % 60
+minutes2 = int(timer2 / 60) % 60            
+
+timer8 = f"{minutes:02}.{seconds:02}{minutes2:02}.{seconds2:02}"
+
+display.write_to_buffer_with_dots(str(timer8))
+display.display()
+np[0] = (3, 202, 252)
+np.write()
+
+while True:
+    if button2.value() and button1.value():
+        break
+    elif button1.value() and adjust == 1 and not button2.value():
+        timer1 += 120
+        seconds = timer1 % 60
+        minutes = int(timer1 / 60) % 60
+        #    print(f"{hours:02}.{minutes:02}.{seconds:02}")
+        timer = f"{minutes:02}.{seconds:02}"
+        
+        seconds2 = timer2 % 60
+        minutes2 = int(timer2 / 60) % 60            
+        
+        timer8 = f"{minutes:02}.{seconds:02}{minutes2:02}.{seconds2:02}"
+        
+        display.write_to_buffer_with_dots(str(timer8))
+        display.display()
+        time.sleep(0.25)
+        
+    elif button1.value() and adjust == 2 and not button2.value():
+        timer2 += 120
+        seconds = timer1 % 60
+        minutes = int(timer1 / 60) % 60
+        #    print(f"{hours:02}.{minutes:02}.{seconds:02}")
+        timer = f"{minutes:02}.{seconds:02}"
+        
+        seconds2 = timer2 % 60
+        minutes2 = int(timer2 / 60) % 60            
+        
+        timer8 = f"{minutes:02}.{seconds:02}{minutes2:02}.{seconds2:02}"
+        
+        display.write_to_buffer_with_dots(str(timer8))
+        display.display()
+        time.sleep(0.25)
+
+    elif button2.value() and adjust == 1 and not button1.value():
+        adjust = 2
+        np[0] = (3, 202, 252)
+        np.write()
+        time.sleep(0.25)
+    elif button2.value() and adjust == 2 and not button1.value():
+        adjust = 1
+        np[0] = (252, 3, 140)
+        np.write()
+        time.sleep(0.25)
+    else:
+        continue
+print("adjustment over")
+np[0] = (0, 0, 0)
+np.write()
+
+time.sleep(0.5)
+
+while True:
+#     print(time.time())
+    while True:
+#         print(time.time())
+#         print(player_state)
+        currentmillis = time.ticks_ms()
+        if button1.value() and button2.value():
+
+            np[0] = (196, 35, 35)
+            np.write()
+            time.sleep(1)
+            while True:            
+                time.sleep(0.1)
+                if button1.value() and button2.value():
+                    np[0] = (116, 196, 35)
+                    np.write()
+                    time.sleep(1)
+                    np[0] = (0, 0, 0)
+                    np.write()
+                    break
+                
+        elif button1.value():
+            player_state = 2
+            countdown1 = savetime
+            countdown2 = savetime
+            
+            
+        elif button2.value():
+            player_state = 1
+            countdown1 = savetime
+            countdown2 = savetime
+            
+        elif log1 > 3 or log2 > 3:
+            display.write_to_buffer("you lost")
+            display.display()
+            time.sleep(10)
+            
+            
+    #都读秒        
+        elif player_state == 1 and timer1 <= 0 and timer2 <= 0:
+            if log1 <= 3:
+                currentmillis = time.ticks_ms()
+                if currentmillis - previousmillis > interval:
+                    previousmillis = currentmillis;   
+                    countdown1-=1
+                    seconds = countdown1 % 60
+                    minutes = int(countdown1 / 60) % 60
+                   
+                    seconds2 = countdown2 % 60
+                    minutes2 = int(countdown2 / 60) % 60          
+                    timer8 = f"{minutes:02}.{seconds:02}{minutes2:02}.{seconds2:02}"
+                    
+                    display.write_to_buffer_with_dots(str(timer8))
+                    display.display()
+                    if button1.value():
+                        countdown1 = savetime
+                        break
+                    elif countdown1 <= 1:
+                        log1+=1
+                        countdown1 = savetime
+            
+        elif player_state == 2 and timer1 <= 0 and timer2 <= 0:
+            if log2 <= 3:
+                currentmillis = time.ticks_ms()
+                if currentmillis - previousmillis > interval:
+                    previousmillis = currentmillis;   
+                    countdown2-=1
+                    seconds = countdown1 % 60
+                    minutes = int(countdown1 / 60) % 60
+                   
+                    seconds2 = countdown2 % 60
+                    minutes2 = int(countdown2 / 60) % 60          
+                    timer8 = f"{minutes:02}.{seconds:02}{minutes2:02}.{seconds2:02}"
+                    
+                    display.write_to_buffer_with_dots(str(timer8))
+                    display.display()
+                    if button2.value():
+                        countdown2 = savetime
+                        break
+                    elif countdown2 <= 1:
+                        log2+=1
+                        countdown2 = savetime
+            
+
+    # 1 读秒， 2 保留        
+        elif player_state == 2 and timer1 <= 0 and timer2 > 0:            
+            if currentmillis - previousmillis > interval:
+                previousmillis = currentmillis;   
+#                 print("1 sec passed")
+                timer2-=1
+                seconds = countdown1 % 60
+                minutes = int(countdown1 / 60) % 60
+                #    print(f"{hours:02}.{minutes:02}.{seconds:02}")
+#                 timer = f"{minutes:02}.{seconds:02}"
+                
+                seconds2 = timer2 % 60
+                minutes2 = int(timer2 / 60) % 60            
+                
+                timer8 = f"{minutes:02}.{seconds:02}{minutes2:02}.{seconds2:02}"
+                
+                display.write_to_buffer_with_dots(str(timer8))
+                display.display()
+
+            
+
+        elif player_state == 1 and timer1 <= 0 and timer2 > 0:
+            if log1 <= 3:
+                currentmillis = time.ticks_ms()
+                if currentmillis - previousmillis > interval:
+                    previousmillis = currentmillis;   
+                    countdown1-=1
+                    seconds = countdown1 % 60
+                    minutes = int(countdown1 / 60) % 60
+    #                 timer = f"{minutes:02}.{seconds:02}"
+                    
+                    seconds2 = timer2 % 60
+                    minutes2 = int(timer2 / 60) % 60          
+                    timer8 = f"{minutes:02}.{seconds:02}{minutes2:02}.{seconds2:02}"
+                    
+                    display.write_to_buffer_with_dots(str(timer8))
+                    display.display()
+                    if button1.value():
+                        countdown1 = savetime
+                        break
+                    elif countdown1 <= 1:
+                        log1+=1
+                        countdown1 = savetime
+                        
+
+                        
+                
+    # 2 读秒， 1保留        
+        elif player_state == 2 and timer1 > 0 and timer2 <= 0:
+            if log2 <= 3:
+                currentmillis = time.ticks_ms()
+                if currentmillis - previousmillis > interval:
+                    previousmillis = currentmillis;                    
+                    seconds = timer1 % 60
+                    minutes = int(timer1 / 60) % 60
+                    countdown2-=1
+                    seconds2 = countdown2 % 60
+                    minutes2 = int(countdown2 / 60) % 60
+    #                 timer = f"{minutes:02}.{seconds:02}"
+                    
+          
+                    timer8 = f"{minutes:02}.{seconds:02}{minutes2:02}.{seconds2:02}"
+                    
+                    display.write_to_buffer_with_dots(str(timer8))
+                    display.display()
+                    if button2.value():
+                        countdown2 = savetime
+                        break
+                    elif countdown2 <= 1:
+                        log2+=1
+                        countdown2 = savetime
+            
+            
+        elif player_state == 1 and timer1 > 0 and timer2 <= 0:
+            if currentmillis - previousmillis > interval:
+                previousmillis = currentmillis;   
+                timer1-=1
+                seconds = timer1 % 60
+                minutes = int(timer1 / 60) % 60
+                seconds2 = countdown2 % 60
+                minutes2 = int(countdown2 / 60) % 60
+                #    print(f"{hours:02}.{minutes:02}.{seconds:02}")
+#                 timer = f"{minutes:02}.{seconds:02}"                
+                timer8 = f"{minutes:02}.{seconds:02}{minutes2:02}.{seconds2:02}"                
+                display.write_to_buffer_with_dots(str(timer8))
+                display.display()
+# 
+#     #都有保留时间
+#       
+        if player_state == 1 and timer1 > 0 and timer2 > 0:
+            if currentmillis - previousmillis > interval:
+                previousmillis = currentmillis;   
+#                 print("1 sec passed")
+                timer1-=1
+                seconds = timer1 % 60
+                minutes = int(timer1 / 60) % 60
+                #    print(f"{hours:02}.{minutes:02}.{seconds:02}")
+                timer = f"{minutes:02}.{seconds:02}"
+                
+                seconds2 = timer2 % 60
+                minutes2 = int(timer2 / 60) % 60            
+                
+                timer8 = f"{minutes:02}.{seconds:02}{minutes2:02}.{seconds2:02}"
+                
+                display.write_to_buffer_with_dots(str(timer8))
+                display.display()
+                
+        
+        if player_state == 2 and timer1 > 0 and timer2 > 0:
+            if currentmillis - previousmillis > interval:
+                previousmillis = currentmillis;   
+#                 print("1 sec passed")
+                timer2-=1
+                seconds = timer1 % 60
+                minutes = int(timer1 / 60) % 60
+                #    print(f"{hours:02}.{minutes:02}.{seconds:02}")
+                timer = f"{minutes:02}.{seconds:02}"
+                
+                seconds2 = timer2 % 60
+                minutes2 = int(timer2 / 60) % 60            
+                
+                timer8 = f"{minutes:02}.{seconds:02}{minutes2:02}.{seconds2:02}"
+                
+                display.write_to_buffer_with_dots(str(timer8))
+                display.display()
+                
+        else:
+            continue
+#             print('let go')
+#             time.sleep(1)
+
+
